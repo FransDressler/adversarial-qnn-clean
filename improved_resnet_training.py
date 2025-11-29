@@ -228,7 +228,7 @@ def improved_adversarial_training():
         discriminator.train()
         generator.eval()
 
-        disc_metrics_sum = {'total_loss': 0.0, 'accuracy': 0.0}
+        disc_metrics_sum = {'total_loss': 0.0, 'accuracy': 0.0, 'real_accuracy': 0.0, 'fake_accuracy': 0.0}
         disc_batches = 0
 
         # IMPROVED: Multiple discriminator updates per generator update
