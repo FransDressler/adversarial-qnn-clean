@@ -101,6 +101,13 @@ def optimized_full_training():
     print("🎯 Target: >80% volatility ratio with full dataset")
     print("=" * 80)
 
+    # Device configuration
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"🖥️  Training on: {device}")
+    if torch.cuda.is_available():
+        print(f"🎮 GPU: {torch.cuda.get_device_name(0)}")
+        print(f"💾 GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+
     # Optimized configuration from lightweight success
     config = {
         'batch_size': 16,           # SMALL batches (lightweight success)
@@ -146,11 +153,12 @@ def optimized_full_training():
     print(f"   Val: {len(val_dataset):,} samples ({len(val_loader)} batches)")
 
     # Initialize models
-    generator = QuantumGenerator()
-    discriminator = ResNet1DDiscriminator()
+    generator = QuantumGenerator().to(device)
+    discriminator = ResNet1DDiscriminator().to(device)
 
     print(f"📊 Generator Parameters: {sum(p.numel() for p in generator.parameters()):,}")
     print(f"📊 ResNet1D Parameters: {sum(p.numel() for p in discriminator.parameters()):,}")
+    print(f"🖥️  Models moved to: {device}")
 
     # Loss function
     loss_fn = OptimizedAdversarialLoss(
@@ -198,6 +206,7 @@ def optimized_full_training():
         disc_batches = 0
 
         for inputs, targets in train_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
             disc_optimizer.zero_grad()
 
             with torch.no_grad():
@@ -228,6 +237,7 @@ def optimized_full_training():
         gen_batches = 0
 
         for inputs, targets in train_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
             gen_optimizer.zero_grad()
 
             fake_sequences = generator(inputs)
@@ -258,6 +268,7 @@ def optimized_full_training():
             val_fake_vol = 0.0
 
             for inputs, targets in val_loader:
+                inputs, targets = inputs.to(device), targets.to(device)
                 fake_sequences = generator(inputs)
                 fake_output = discriminator(fake_sequences)
                 gen_loss, _ = loss_fn.enhanced_generator_loss(fake_sequences, targets, fake_output)
