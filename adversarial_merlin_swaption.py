@@ -196,6 +196,7 @@ class QuantumGenerator(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Generate realistic swaption sequences"""
         batch_size = x.shape[0]
+        device = x.device  # Get device from input
 
         prices = x[:, :, 0]
         tenors = x[:, 0, 1]
@@ -205,35 +206,35 @@ class QuantumGenerator(nn.Module):
         decomposed = self.decomposer.decompose_batch(prices)
         features = self.decomposer.get_decomposition_features(decomposed)
 
-        # Quantum processing
-        trend_features = features['trend_features']
-        trend_quantum_output = self.trend_qnn(trend_features)
+        # Quantum processing (ensure outputs are on correct device)
+        trend_features = features['trend_features'].to(device)
+        trend_quantum_output = self.trend_qnn(trend_features).to(device)
 
-        level_features = features['level_features']
-        level_input = torch.cat([level_features, tenors.unsqueeze(1), maturities.unsqueeze(1)], dim=1)
-        level_quantum_output = self.level_qnn(level_input)
+        level_features = features['level_features'].to(device)
+        level_input = torch.cat([level_features, tenors.unsqueeze(1), maturities.unsqueeze(1)], dim=1).to(device)
+        level_quantum_output = self.level_qnn(level_input).to(device)
 
-        noise_features = features['noise_features']
-        noise_quantum_output = self.noise_qnn(noise_features)
+        noise_features = features['noise_features'].to(device)
+        noise_quantum_output = self.noise_qnn(noise_features).to(device)
 
-        # Post-quantum processing
-        trend_components = self.trend_grouping(trend_quantum_output)
-        level_components = self.level_grouping(level_quantum_output)
-        noise_components = self.noise_grouping(noise_quantum_output)
+        # Post-quantum processing (ensure intermediate tensors stay on device)
+        trend_components = self.trend_grouping(trend_quantum_output).to(device)
+        level_components = self.level_grouping(level_quantum_output).to(device)
+        noise_components = self.noise_grouping(noise_quantum_output).to(device)
 
-        # Assembly
-        trend_predictions = self.trend_assembly(trend_components)
-        base_level = self.level_assembly(level_components)
-        level_broadcast = base_level.repeat(1, self.prediction_horizon)
-        noise_predictions = self.noise_assembly(noise_components)
+        # Assembly (ensure all outputs stay on device)
+        trend_predictions = self.trend_assembly(trend_components).to(device)
+        base_level = self.level_assembly(level_components).to(device)
+        level_broadcast = base_level.repeat(1, self.prediction_horizon).to(device)
+        noise_predictions = self.noise_assembly(noise_components).to(device)
 
-        # Final assembly
-        combined_components = torch.cat([trend_predictions, base_level, noise_predictions], dim=1)
-        final_predictions = self.final_assembly(combined_components)
+        # Final assembly (ensure final output is on device)
+        combined_components = torch.cat([trend_predictions, base_level, noise_predictions], dim=1).to(device)
+        final_predictions = self.final_assembly(combined_components).to(device)
 
-        # Add baseline
-        last_price = prices[:, -1].unsqueeze(1)
-        predictions = last_price + final_predictions
+        # Add baseline (ensure final output is on device)
+        last_price = prices[:, -1].unsqueeze(1).to(device)
+        predictions = (last_price + final_predictions).to(device)
 
         return predictions
 
