@@ -84,7 +84,9 @@ class SignalDecomposer:
                      (trends[:, -15:-10].mean(dim=1) - trends[:, -20:-15].mean(dim=1))
         trend_curvature = torch.std(torch.diff(trends, dim=1), dim=1)
 
-        trend_features = torch.stack([trend_slope, trend_recent, trend_accel, trend_curvature], dim=1)
+        # Ensure all tensors are on the same device as input
+        device = trends.device
+        trend_features = torch.stack([trend_slope, trend_recent, trend_accel, trend_curvature], dim=1).to(device)
 
         # Level features
         current_level = levels[:, -1]
@@ -92,7 +94,7 @@ class SignalDecomposer:
         level_stability = 1.0 / (1.0 + torch.std(levels, dim=1))
         level_position = (current_level - levels.min(dim=1)[0]) / (level_range + 1e-8)
 
-        level_features = torch.stack([current_level, level_range, level_stability, level_position], dim=1)
+        level_features = torch.stack([current_level, level_range, level_stability, level_position], dim=1).to(device)
 
         # Noise features
         noise_volatility = torch.std(noise, dim=1)
@@ -100,7 +102,7 @@ class SignalDecomposer:
         noise_kurtosis = torch.mean(noise ** 4, dim=1) / (noise_volatility ** 4 + 1e-8)
         noise_recent = torch.std(noise[:, -14:], dim=1)
 
-        noise_features = torch.stack([noise_volatility, noise_skewness, noise_kurtosis, noise_recent], dim=1)
+        noise_features = torch.stack([noise_volatility, noise_skewness, noise_kurtosis, noise_recent], dim=1).to(device)
 
         return {
             'trend_features': trend_features,
