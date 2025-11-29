@@ -40,7 +40,7 @@ class SignalDecomposer:
         noise = torch.zeros_like(prices_batch)
 
         for batch_idx in range(batch_size):
-            prices = prices_batch[batch_idx].detach().numpy()
+            prices = prices_batch[batch_idx].detach().cpu().numpy()
 
             # Trend extraction
             if len(prices) >= self.trend_window:
@@ -63,9 +63,11 @@ class SignalDecomposer:
             # Noise extraction
             noise_component = prices - trend_smooth
 
-            trends[batch_idx] = torch.tensor(trend_smooth, dtype=torch.float32)
-            levels[batch_idx] = torch.tensor(price_levels, dtype=torch.float32)
-            noise[batch_idx] = torch.tensor(noise_component, dtype=torch.float32)
+            # Convert back to same device as input
+            device = prices_batch.device
+            trends[batch_idx] = torch.tensor(trend_smooth, dtype=torch.float32, device=device)
+            levels[batch_idx] = torch.tensor(price_levels, dtype=torch.float32, device=device)
+            noise[batch_idx] = torch.tensor(noise_component, dtype=torch.float32, device=device)
 
         return {'trend': trends, 'level': levels, 'noise': noise, 'original': prices_batch}
 
